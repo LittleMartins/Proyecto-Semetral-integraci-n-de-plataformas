@@ -1,0 +1,300 @@
+<!-- Contenedor principal de dirección -->
+<div class="address-container">
+    <!-- Botón para usar ubicación actual -->
+    <button type="button" class="use-current-location" id="useCurrentLocation">
+        <i class="fas fa-location-arrow"></i>
+        Usar mi ubicación actual
+    </button>
+
+    <!-- Campo de búsqueda de dirección -->
+    <div class="address-search">
+        <input type="text" 
+               id="addressSearch" 
+               class="form-control" 
+               placeholder="Ingresa tu dirección en Chile..."
+               autocomplete="off">
+        <i class="fas fa-search"></i>
+    </div>
+
+    <!-- Contenedor del mapa -->
+    <div class="map-container" id="map"></div>
+
+    <!-- Detalles de la dirección -->
+    <div class="address-details">
+        <!-- Calle y número -->
+        <div class="form-group">
+            <label for="street" class="form-label required">Calle y número</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="street" 
+                   placeholder="Ej: Av. Providencia 1234"
+                   required>
+        </div>
+
+        <!-- Información adicional -->
+        <div class="form-group">
+            <label for="additional" class="form-label">Información adicional</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="additional" 
+                   placeholder="Ej: Depto 42, Oficina 105, Casa B">
+        </div>
+
+        <!-- Región -->
+        <div class="form-group">
+            <label for="region" class="form-label required">Región</label>
+            <select class="form-select" id="region" required>
+                <option value="">Selecciona una región</option>
+                <option value="Arica y Parinacota">Región de Arica y Parinacota</option>
+                <option value="Tarapacá">Región de Tarapacá</option>
+                <option value="Antofagasta">Región de Antofagasta</option>
+                <option value="Atacama">Región de Atacama</option>
+                <option value="Coquimbo">Región de Coquimbo</option>
+                <option value="Valparaíso">Región de Valparaíso</option>
+                <option value="Metropolitana">Región Metropolitana de Santiago</option>
+                <option value="O'Higgins">Región del Libertador General Bernardo O'Higgins</option>
+                <option value="Maule">Región del Maule</option>
+                <option value="Ñuble">Región de Ñuble</option>
+                <option value="Biobío">Región del Biobío</option>
+                <option value="Araucanía">Región de La Araucanía</option>
+                <option value="Los Ríos">Región de Los Ríos</option>
+                <option value="Los Lagos">Región de Los Lagos</option>
+                <option value="Aysén">Región de Aysén del General Carlos Ibáñez del Campo</option>
+                <option value="Magallanes">Región de Magallanes y de la Antártica Chilena</option>
+            </select>
+        </div>
+
+        <!-- Comuna -->
+        <div class="form-group">
+            <label for="commune" class="form-label required">Comuna</label>
+            <select class="form-select" id="commune" required>
+                <option value="">Primero selecciona una región</option>
+            </select>
+        </div>
+
+        <!-- Ciudad -->
+        <div class="form-group">
+            <label for="city" class="form-label required">Ciudad</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="city" 
+                   required>
+        </div>
+
+        <!-- País (oculto) -->
+        <input type="hidden" id="country" value="Chile">
+    </div>
+
+    <!-- Indicador de ubicación actual -->
+    <div class="current-location-indicator" style="display: none;">
+        <i class="fas fa-map-marker-alt"></i>
+        <span>Ubicación actual detectada</span>
+    </div>
+
+    <!-- Mensaje de error de geolocalización -->
+    <div class="geolocation-error" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>No se pudo obtener tu ubicación actual</span>
+    </div>
+</div>
+
+<!-- Script de Google Maps -->
+<script src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&libraries=places"></script>
+
+<!-- Script para manejar la funcionalidad de dirección -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Datos de comunas por región
+    const comunasPorRegion = {
+        'Arica y Parinacota': ['Arica', 'Camarones', 'Putre', 'General Lagos'],
+        'Tarapacá': ['Alto Hospicio', 'Iquique', 'Pozo Almonte', 'Camiña', 'Colchane', 'Huara', 'Pica'],
+        'Antofagasta': ['Antofagasta', 'Mejillones', 'Sierra Gorda', 'Taltal', 'Calama', 'Ollagüe', 'San Pedro de Atacama', 'Tocopilla', 'María Elena'],
+        'Atacama': ['Copiapó', 'Caldera', 'Tierra Amarilla', 'Chañaral', 'Diego de Almagro', 'Vallenar', 'Alto del Carmen', 'Freirina', 'Huasco'],
+        'Coquimbo': ['La Serena', 'Coquimbo', 'Andacollo', 'La Higuera', 'Paihuano', 'Vicuña', 'Illapel', 'Canela', 'Los Vilos', 'Salamanca', 'Ovalle', 'Combarbalá', 'Monte Patria', 'Punitaqui', 'Río Hurtado'],
+        'Valparaíso': ['Valparaíso', 'Casablanca', 'Concón', 'Juan Fernández', 'Puchuncaví', 'Quintero', 'Viña del Mar', 'Isla de Pascua', 'Los Andes', 'Calle Larga', 'Rinconada', 'San Esteban', 'La Ligua', 'Cabildo', 'Papudo', 'Petorca', 'Zapallar', 'Quillota', 'La Calera', 'Hijuelas', 'La Cruz', 'Nogales', 'San Antonio', 'Algarrobo', 'Cartagena', 'El Quisco', 'El Tabo', 'Santo Domingo', 'San Felipe', 'Catemu', 'Llaillay', 'Panquehue', 'Putaendo', 'Santa María', 'Quilpué', 'Limache', 'Olmué', 'Villa Alemana'],
+        'Metropolitana': ['Cerrillos', 'Cerro Navia', 'Conchalí', 'El Bosque', 'Estación Central', 'Huechuraba', 'Independencia', 'La Cisterna', 'La Florida', 'La Granja', 'La Pintana', 'La Reina', 'Las Condes', 'Lo Barnechea', 'Lo Espejo', 'Lo Prado', 'Macul', 'Maipú', 'Ñuñoa', 'Pedro Aguirre Cerda', 'Peñalolén', 'Providencia', 'Pudahuel', 'Quilicura', 'Quinta Normal', 'Recoleta', 'Renca', 'San Joaquín', 'San Miguel', 'San Ramón', 'Santiago', 'Vitacura', 'Puente Alto', 'Pirque', 'San José de Maipo', 'Colina', 'Lampa', 'Tiltil', 'San Bernardo', 'Buin', 'Calera de Tango', 'Paine', 'Melipilla', 'Alhué', 'Curacaví', 'María Pinto', 'San Pedro', 'Talagante', 'El Monte', 'Isla de Maipo', 'Padre Hurtado', 'Peñaflor'],
+        'O\'Higgins': ['Rancagua', 'Codegua', 'Coinco', 'Coltauco', 'Doñihue', 'Graneros', 'Las Cabras', 'Machalí', 'Malloa', 'Mostazal', 'Olivar', 'Peumo', 'Pichidegua', 'Quinta de Tilcoco', 'Rengo', 'Requínoa', 'San Vicente', 'Pichilemu', 'La Estrella', 'Litueche', 'Marchihue', 'Navidad', 'Paredones', 'San Fernando', 'Chépica', 'Chimbarongo', 'Lolol', 'Nancagua', 'Palmilla', 'Peralillo', 'Placilla', 'Pumanque', 'Santa Cruz'],
+        'Maule': ['Talca', 'Constitución', 'Curepto', 'Empedrado', 'Maule', 'Pelarco', 'Pencahue', 'Río Claro', 'San Clemente', 'San Rafael', 'Cauquenes', 'Chanco', 'Pelluhue', 'Curicó', 'Hualañé', 'Licantén', 'Molina', 'Rauco', 'Romeral', 'Sagrada Familia', 'Teno', 'Vichuquén', 'Linares', 'Colbún', 'Longaví', 'Parral', 'Retiro', 'San Javier', 'Villa Alegre', 'Yerbas Buenas'],
+        'Ñuble': ['Chillán', 'Bulnes', 'Cobquecura', 'Coelemu', 'Coihueco', 'Chillán Viejo', 'El Carmen', 'Ninhue', 'Ñiquén', 'Pemuco', 'Pinto', 'Portezuelo', 'Quillón', 'Quirihue', 'Ránquil', 'San Carlos', 'San Fabián', 'San Ignacio', 'San Nicolás', 'Treguaco', 'Yungay'],
+        'Biobío': ['Concepción', 'Coronel', 'Chiguayante', 'Florida', 'Hualqui', 'Lota', 'Penco', 'San Pedro de la Paz', 'Santa Juana', 'Talcahuano', 'Tomé', 'Hualpén', 'Lebu', 'Arauco', 'Cañete', 'Contulmo', 'Curanilahue', 'Los Álamos', 'Tirúa', 'Los Ángeles', 'Antuco', 'Cabrero', 'Laja', 'Mulchén', 'Nacimiento', 'Negrete', 'Quilaco', 'Quilleco', 'San Rosendo', 'Santa Bárbara', 'Tucapel', 'Yumbel', 'Alto Biobío'],
+        'Araucanía': ['Temuco', 'Carahue', 'Cunco', 'Curarrehue', 'Freire', 'Galvarino', 'Gorbea', 'Lautaro', 'Loncoche', 'Melipeuco', 'Nueva Imperial', 'Padre las Casas', 'Perquenco', 'Pitrufquén', 'Pucón', 'Saavedra', 'Teodoro Schmidt', 'Toltén', 'Vilcún', 'Villarrica', 'Cholchol', 'Angol', 'Collipulli', 'Curacautín', 'Ercilla', 'Lonquimay', 'Los Sauces', 'Lumaco', 'Purén', 'Renaico', 'Traiguén', 'Victoria'],
+        'Los Ríos': ['Valdivia', 'Corral', 'Lanco', 'Los Lagos', 'Máfil', 'Mariquina', 'Paillaco', 'Panguipulli', 'La Unión', 'Futrono', 'Lago Ranco', 'Río Bueno'],
+        'Los Lagos': ['Puerto Montt', 'Calbuco', 'Cochamó', 'Fresia', 'Frutillar', 'Los Muermos', 'Llanquihue', 'Maullín', 'Puerto Varas', 'Castro', 'Ancud', 'Chonchi', 'Curaco de Vélez', 'Dalcahue', 'Puqueldón', 'Queilén', 'Quellón', 'Quemchi', 'Quinchao', 'Osorno', 'Puerto Octay', 'Purranque', 'Puyehue', 'Río Negro', 'San Juan de la Costa', 'San Pablo', 'Chaitén', 'Futaleufú', 'Hualaihué', 'Palena'],
+        'Aysén': ['Coihaique', 'Lago Verde', 'Aysén', 'Cisnes', 'Guaitecas', 'Cochrane', 'O\'Higgins', 'Tortel', 'Chile Chico', 'Río Ibáñez'],
+        'Magallanes': ['Punta Arenas', 'Laguna Blanca', 'Río Verde', 'San Gregorio', 'Cabo de Hornos', 'Antártica', 'Porvenir', 'Primavera', 'Timaukel', 'Natales', 'Torres del Paine']
+    };
+
+    // Inicializar el mapa
+    const mapElement = document.getElementById('map');
+    const defaultLocation = { lat: -33.4489, lng: -70.6693 }; // Santiago, Chile
+    
+    const map = new google.maps.Map(mapElement, {
+        center: defaultLocation,
+        zoom: 15,
+        styles: [/* Aquí puedes agregar estilos personalizados del mapa */]
+    });
+
+    // Marcador para la ubicación seleccionada
+    let marker = new google.maps.Marker({
+        map: map,
+        draggable: true,
+        position: defaultLocation
+    });
+
+    // Inicializar el autocompletado de direcciones
+    const searchInput = document.getElementById('addressSearch');
+    const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+        componentRestrictions: { country: 'cl' },
+        fields: ['address_components', 'geometry', 'name', 'formatted_address']
+    });
+
+    // Manejar cambios en el selector de región
+    document.getElementById('region').addEventListener('change', function() {
+        const regionSeleccionada = this.value;
+        const comunaSelect = document.getElementById('commune');
+        comunaSelect.innerHTML = '<option value="">Selecciona una comuna</option>';
+        
+        if (regionSeleccionada && comunasPorRegion[regionSeleccionada]) {
+            comunasPorRegion[regionSeleccionada].forEach(comuna => {
+                const option = document.createElement('option');
+                option.value = comuna;
+                option.textContent = comuna;
+                comunaSelect.appendChild(option);
+            });
+            comunaSelect.disabled = false;
+        } else {
+            comunaSelect.disabled = true;
+        }
+    });
+
+    // Manejar la selección de una dirección
+    autocomplete.addListener('place_changed', function() {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) return;
+
+        // Actualizar el mapa
+        map.setCenter(place.geometry.location);
+        marker.setPosition(place.geometry.location);
+        map.setZoom(17);
+
+        // Llenar los campos de dirección
+        fillAddressFields(place.address_components, place.formatted_address);
+    });
+
+    // Función para llenar los campos de dirección
+    function fillAddressFields(components, formatted_address) {
+        let street = '', commune = '', city = '', region = '', postal = '';
+        
+        components.forEach(component => {
+            const type = component.types[0];
+            
+            switch(type) {
+                case 'route':
+                    street = component.long_name;
+                    break;
+                case 'street_number':
+                    street = street + ' ' + component.long_name;
+                    break;
+                case 'locality':
+                    city = component.long_name;
+                    break;
+                case 'administrative_area_level_3':
+                    commune = component.long_name;
+                    break;
+                case 'administrative_area_level_1':
+                    region = component.long_name;
+                    break;
+                case 'postal_code':
+                    postal = component.long_name;
+                    break;
+            }
+        });
+
+        // Actualizar los campos
+        document.getElementById('street').value = street || formatted_address;
+        document.getElementById('city').value = city;
+        document.getElementById('postal_code').value = postal;
+
+        // Actualizar región y comuna
+        const regionSelect = document.getElementById('region');
+        const communeSelect = document.getElementById('commune');
+
+        // Encontrar la región correspondiente
+        for (let [regionKey, comunas] of Object.entries(comunasPorRegion)) {
+            if (region.includes(regionKey) || regionKey.includes(region)) {
+                regionSelect.value = regionKey;
+                // Disparar el evento change para actualizar las comunas
+                regionSelect.dispatchEvent(new Event('change'));
+                
+                // Intentar encontrar la comuna correspondiente
+                if (commune) {
+                    for (let comunaOption of comunas) {
+                        if (commune.includes(comunaOption) || comunaOption.includes(commune)) {
+                            communeSelect.value = comunaOption;
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    // Manejar la ubicación actual
+    document.getElementById('useCurrentLocation').addEventListener('click', function() {
+        if (!navigator.geolocation) {
+            showGeolocationError('Tu navegador no soporta geolocalización');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+
+                map.setCenter(pos);
+                marker.setPosition(pos);
+                map.setZoom(17);
+                
+                // Obtener la dirección desde las coordenadas
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ location: pos }, (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        fillAddressFields(results[0].address_components, results[0].formatted_address);
+                        document.getElementById('addressSearch').value = results[0].formatted_address;
+                        document.querySelector('.current-location-indicator').style.display = 'flex';
+                    }
+                });
+            },
+            error => {
+                showGeolocationError('No se pudo obtener tu ubicación');
+            }
+        );
+    });
+
+    // Función para mostrar errores de geolocalización
+    function showGeolocationError(message) {
+        const errorElement = document.querySelector('.geolocation-error');
+        errorElement.querySelector('span').textContent = message;
+        errorElement.style.display = 'flex';
+        setTimeout(() => {
+            errorElement.style.display = 'none';
+        }, 3000);
+    }
+
+    // Actualizar dirección cuando se arrastra el marcador
+    marker.addListener('dragend', function() {
+        const pos = marker.getPosition();
+        const geocoder = new google.maps.Geocoder();
+        
+        geocoder.geocode({ location: pos }, (results, status) => {
+            if (status === 'OK' && results[0]) {
+                fillAddressFields(results[0].address_components, results[0].formatted_address);
+                document.getElementById('addressSearch').value = results[0].formatted_address;
+            }
+        });
+    });
+});
+</script> 
