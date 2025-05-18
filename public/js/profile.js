@@ -218,65 +218,68 @@ async function cargarDatosUsuario(userId) {
 function actualizarUI(userData) {
     console.log('🔵 Actualizando UI con datos:', userData);
     
-    const elementos = {
-        // Elementos del formulario
-        fullName: document.getElementById('fullName'),
-        email: document.getElementById('email'),
-        phone: document.getElementById('phone'),
-        region: document.getElementById('region'),
-        comuna: document.getElementById('comuna'),
-        address: document.getElementById('address'),
-        // Elementos de solo lectura
-        readOnlyName: document.getElementById('readOnlyName'),
-        readOnlyEmail: document.getElementById('readOnlyEmail'),
-        readOnlyPhone: document.getElementById('readOnlyPhone'),
-        readOnlyRegion: document.getElementById('readOnlyRegion'),
-        readOnlyComuna: document.getElementById('readOnlyComuna'),
-        readOnlyAddress: document.getElementById('readOnlyAddress'),
-        // Elemento del menú de navegación
-        navbarUserName: document.querySelector('.user-name')
-    };
+    try {
+        // Actualizar valores de solo lectura primero
+        const readOnlyElements = {
+            'readOnlyName': userData.nombreCompleto,
+            'readOnlyEmail': userData.email,
+            'readOnlyPhone': userData.telefono,
+            'readOnlyRegion': userData.region,
+            'readOnlyComuna': userData.comuna,
+            'readOnlyAddress': userData.direccion
+        };
 
-    // Verificar elementos
-    const elementosFaltantes = Object.entries(elementos)
-        .filter(([key, element]) => !element)
-        .map(([key]) => key);
+        // Actualizar elementos de solo lectura
+        Object.entries(readOnlyElements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value || '-';
+            }
+        });
 
-    if (elementosFaltantes.length > 0) {
-        console.error('❌ Elementos no encontrados:', elementosFaltantes.join(', '));
-        mostrarAlerta('Error al cargar la interfaz', 'error');
-        return;
+        // Actualizar valores del formulario
+        const formElements = {
+            'fullName': userData.nombreCompleto,
+            'email': userData.email,
+            'phone': userData.telefono,
+            'region': userData.region,
+            'address': userData.direccion
+        };
+
+        // Actualizar elementos del formulario
+        Object.entries(formElements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value || '';
+            }
+        });
+
+        // Manejar el teléfono específicamente
+        const phoneInput = document.getElementById('phone');
+        if (phoneInput) {
+            phoneInput.value = userData.telefono || '';
+            // Agregar event listener para formateo de teléfono
+            phoneInput.addEventListener('input', (e) => formatearTelefono(e.target));
+        }
+
+        // Actualizar región y comunas
+        const regionSelect = document.getElementById('region');
+        if (regionSelect) {
+            regionSelect.value = userData.region || '';
+            if (userData.region) {
+                actualizarComunas(userData.region);
+                const comunaSelect = document.getElementById('comuna');
+                if (comunaSelect) {
+                    comunaSelect.value = userData.comuna || '';
+                }
+            }
+        }
+
+        console.log('✅ UI actualizada correctamente');
+    } catch (error) {
+        console.error('❌ Error al actualizar UI:', error);
+        mostrarAlerta('Error al actualizar la interfaz', 'error');
     }
-
-    // Actualizar valores del formulario
-    elementos.fullName.value = userData.nombreCompleto || '';
-    elementos.email.value = userData.email || '';
-    elementos.phone.value = userData.telefono || '';
-    elementos.region.value = userData.region || '';
-    
-    // Actualizar comunas si hay región seleccionada
-    if (userData.region) {
-        actualizarComunas(userData.region);
-        elementos.comuna.value = userData.comuna || '';
-    }
-    
-    elementos.address.value = userData.direccion || '';
-
-    // Actualizar valores de solo lectura
-    elementos.readOnlyName.textContent = userData.nombreCompleto || '-';
-    elementos.readOnlyEmail.textContent = userData.email || '-';
-    elementos.readOnlyPhone.textContent = userData.telefono || '-';
-    elementos.readOnlyRegion.textContent = userData.region || '-';
-    elementos.readOnlyComuna.textContent = userData.comuna || '-';
-    elementos.readOnlyAddress.textContent = userData.direccion || '-';
-
-    // Actualizar nombre en el menú de navegación
-    if (elementos.navbarUserName) {
-        elementos.navbarUserName.textContent = userData.nombreCompleto || 'Usuario';
-    }
-
-    // Log para verificar la actualización
-    console.log('✅ UI actualizada con nombre:', userData.nombreCompleto || 'Usuario');
 }
 
 // Función para actualizar las comunas según la región seleccionada
@@ -385,129 +388,126 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Iniciando aplicación...');
     
     try {
-        // Verificar autenticación primero
-        const estaAutenticado = await verificarAutenticacion();
-        if (!estaAutenticado) {
-            console.log('🔄 Redirigiendo a inicio de sesión...');
-            window.location.href = 'iniciar-sesion.html';
-            return;
-        }
-
-        // Verificar conexión con Firestore
-        const conexionOK = await verificarConexionFirestore();
-        if (!conexionOK) {
-            mostrarAlerta('Error de conexión con la base de datos', 'error');
-            return;
-        }
-
-        // Cargar datos del usuario
-        try {
-            console.log('📥 Cargando datos del usuario...');
-            const userData = await cargarDatosUsuario(currentUser.uid);
-            if (userData) {
-                console.log('✅ Datos cargados correctamente');
-                actualizarUI(userData);
+        // Escuchar cambios en el estado de autenticación
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                console.log('✅ Usuario autenticado:', user.uid);
+                
+                try {
+                    // Cargar datos inmediatamente
+                    const userData = await cargarDatosUsuario(user.uid);
+                    if (userData) {
+                        console.log('✅ Datos cargados correctamente');
+                        actualizarUI(userData);
+                    }
+                } catch (error) {
+                    console.error('❌ Error al cargar datos:', error);
+                    mostrarAlerta('Error al cargar el perfil: ' + error.message, 'error');
+                }
+            } else {
+                console.log('🔄 Redirigiendo a inicio de sesión...');
+                window.location.href = 'iniciar-sesion.html';
             }
-        } catch (error) {
-            console.error('❌ Error al cargar datos:', error);
-            mostrarAlerta('Error al cargar el perfil: ' + error.message, 'error');
-        }
+        });
+
+        // Configurar event listeners
+        configurarEventListeners();
 
     } catch (error) {
         console.error('❌ Error en la inicialización:', error);
         mostrarAlerta('Error al iniciar la aplicación', 'error');
     }
-
-    // Configurar manejadores de eventos
-    configurarEventListeners();
 });
 
 // Función para configurar los event listeners
 function configurarEventListeners() {
-    const profileForm = document.getElementById('profileForm');
-    const imageInput = document.getElementById('imageInput');
-    const deleteAccountBtn = document.getElementById('deleteAccountBtn');
-    const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+    console.log('🔵 Configurando event listeners');
+    
+    const phoneInput = document.getElementById('phone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            formatearTelefono(this);
+        });
+    } else {
+        console.warn('⚠️ Elemento phone no encontrado');
+    }
+
     const editarPerfilBtn = document.getElementById('editarPerfilBtn');
-    const perfilReadOnly = document.getElementById('perfilReadOnly');
-
-    // Configurar botón de editar perfil
     if (editarPerfilBtn) {
-        editarPerfilBtn.addEventListener('click', function() {
-            const formulario = document.getElementById('profileForm');
-            const vistaReadOnly = document.getElementById('perfilReadOnly');
-            
-            if (formulario.classList.contains('d-none')) {
-                // Mostrar formulario
-                formulario.classList.remove('d-none');
-                vistaReadOnly.classList.add('d-none');
-                editarPerfilBtn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Cancelar edición';
-                editarPerfilBtn.classList.replace('btn-light', 'btn-danger');
-            } else {
-                // Ocultar formulario
-                formulario.classList.add('d-none');
-                vistaReadOnly.classList.remove('d-none');
-                editarPerfilBtn.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar mis datos';
-                editarPerfilBtn.classList.replace('btn-danger', 'btn-light');
-                
-                // Recargar datos originales
-                if (currentUser) {
-                    cargarDatosUsuario(currentUser.uid).then(userData => {
-                        actualizarUI(userData);
-                    }).catch(error => {
-                        console.error('Error al recargar datos:', error);
-                    });
-                }
-            }
-        });
+        editarPerfilBtn.addEventListener('click', handleEditarPerfil);
+    } else {
+        console.warn('⚠️ Elemento editarPerfilBtn no encontrado');
     }
 
-    // Configurar botones de mostrar/ocultar contraseña
-    const togglePasswordButtons = document.querySelectorAll('.toggle-password');
-    if (togglePasswordButtons && togglePasswordButtons.length > 0) {
-        togglePasswordButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const passwordInput = document.getElementById(targetId);
-                const icon = this.querySelector('i');
-
-                if (passwordInput) {
-                    if (passwordInput.type === 'password') {
-                        passwordInput.type = 'text';
-                        icon.classList.remove('bi-eye-slash');
-                        icon.classList.add('bi-eye');
-                    } else {
-                        passwordInput.type = 'password';
-                        icon.classList.remove('bi-eye');
-                        icon.classList.add('bi-eye-slash');
-                    }
-                }
-            });
-        });
-    }
-
+    const profileForm = document.getElementById('profileForm');
     if (profileForm) {
         profileForm.addEventListener('submit', handleProfileSubmit);
     } else {
-        console.error('❌ No se encontró el formulario de perfil');
+        console.warn('⚠️ Elemento profileForm no encontrado');
     }
 
+    const regionSelect = document.getElementById('region');
+    if (regionSelect) {
+        regionSelect.addEventListener('change', function() {
+            actualizarComunas(this.value);
+        });
+    } else {
+        console.warn('⚠️ Elemento region no encontrado');
+    }
+
+    const imageInput = document.getElementById('imageInput');
     if (imageInput) {
         imageInput.addEventListener('change', handleImageChange);
     } else {
-        console.error('❌ No se encontró el input de imagen');
+        console.warn('⚠️ Elemento imageInput no encontrado');
     }
 
+    const deleteAccountBtn = document.getElementById('deleteAccountBtn');
     if (deleteAccountBtn) {
         deleteAccountBtn.addEventListener('click', handleDeleteAccount);
     } else {
-        console.error('❌ No se encontró el botón de eliminar cuenta');
+        console.warn('⚠️ Elemento deleteAccountBtn no encontrado');
     }
+}
 
-    if (forgotPasswordBtn) {
-        forgotPasswordBtn.addEventListener('click', handleForgotPassword);
-    } else {
-        console.error('❌ No se encontró el botón de olvidaste tu contraseña');
+// Función para manejar el botón de editar perfil
+function handleEditarPerfil() {
+    try {
+        const formulario = document.getElementById('profileForm');
+        const vistaReadOnly = document.getElementById('perfilReadOnly');
+        const editarPerfilBtn = document.getElementById('editarPerfilBtn');
+        
+        if (!formulario || !vistaReadOnly || !editarPerfilBtn) {
+            throw new Error('No se encontraron los elementos necesarios');
+        }
+        
+        if (formulario.classList.contains('d-none')) {
+            // Mostrar formulario
+            formulario.classList.remove('d-none');
+            vistaReadOnly.classList.add('d-none');
+            editarPerfilBtn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Cancelar edición';
+            editarPerfilBtn.classList.replace('btn-light', 'btn-danger');
+        } else {
+            // Ocultar formulario
+            formulario.classList.add('d-none');
+            vistaReadOnly.classList.remove('d-none');
+            editarPerfilBtn.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar mis datos';
+            editarPerfilBtn.classList.replace('btn-danger', 'btn-light');
+            
+            // Recargar datos originales
+            if (currentUser) {
+                cargarDatosUsuario(currentUser.uid)
+                    .then(userData => actualizarUI(userData))
+                    .catch(error => {
+                        console.error('Error al recargar datos:', error);
+                        mostrarAlerta('Error al recargar los datos', 'error');
+                    });
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error al manejar edición:', error);
+        mostrarAlerta(error.message, 'error');
     }
 }
 
@@ -625,12 +625,12 @@ async function handleForgotPassword() {
     }
 }
 
-// Eliminar cuenta
-deleteAccountBtn.addEventListener('click', async () => {
+// Función para manejar la eliminación de cuenta
+async function handleDeleteAccount() {
     try {
         const result = await Swal.fire({
             title: '¿Estás seguro?',
-            text: 'Esta acción eliminará permanentemente tu cuenta y todos tus datos. No podrás recuperarlos.',
+            text: 'Esta acción eliminará permanentemente tu cuenta y todos tus datos. Esta acción no se puede deshacer.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',
@@ -639,45 +639,56 @@ deleteAccountBtn.addEventListener('click', async () => {
             cancelButtonText: 'Cancelar'
         });
 
-        if (!result.isConfirmed) return;
+        if (result.isConfirmed) {
+            // Solicitar contraseña para reautenticar
+            const { value: password } = await Swal.fire({
+                title: 'Confirma tu contraseña',
+                input: 'password',
+                inputLabel: 'Por seguridad, ingresa tu contraseña actual',
+                inputPlaceholder: 'Contraseña',
+                showCancelButton: true,
+                confirmButtonText: 'Confirmar',
+                cancelButtonText: 'Cancelar',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Por favor, ingresa tu contraseña';
+                    }
+                }
+            });
 
-        const user = auth.currentUser;
-        if (!user) throw new Error('No hay usuario autenticado');
+            if (password) {
+                const user = auth.currentUser;
+                const credential = EmailAuthProvider.credential(user.email, password);
 
-        // Eliminar foto de perfil
-        if (user.photoURL) {
-            const imageRef = ref(storage, `fotos-perfil/${user.uid}`);
-            await deleteObject(imageRef).catch(console.error);
+                // Reautenticar usuario
+                await reauthenticateWithCredential(user, credential);
+
+                // Eliminar datos del usuario en Firestore
+                await deleteDoc(doc(db, 'usuarios', user.uid));
+
+                // Eliminar usuario de Authentication
+                await deleteUser(user);
+
+                await Swal.fire(
+                    '¡Cuenta eliminada!',
+                    'Tu cuenta ha sido eliminada exitosamente.',
+                    'success'
+                );
+
+                // Redirigir al inicio
+                window.location.href = 'index.html';
+            }
         }
-
-        // Eliminar datos de Firestore
-        const userDocRef = doc(db, 'usuarios', user.uid);
-        await deleteDoc(userDocRef);
-
-        // Eliminar cuenta de Auth
-        await deleteUser(user);
-
-        await Swal.fire(
-            '¡Cuenta eliminada!',
-            'Tu cuenta ha sido eliminada correctamente',
-            'success'
-        );
-
-        // Redirigir al inicio
-        window.location.href = 'index.html';
     } catch (error) {
-        console.error('Error:', error);
-        mostrarAlerta('Error al eliminar la cuenta. Por favor, intenta de nuevo más tarde.', 'error');
+        console.error('Error al eliminar cuenta:', error);
+        let mensajeError = 'Hubo un error al eliminar la cuenta.';
+        
+        if (error.code === 'auth/wrong-password') {
+            mensajeError = 'La contraseña ingresada es incorrecta.';
+        }
+        
+        mostrarAlerta(mensajeError, 'error');
     }
-});
-
-// Formatear teléfono
-phoneInput.addEventListener('input', (e) => formatearTelefono(e.target));
-
-// Función para validar teléfono
-function validarTelefono(telefono) {
-    const telefonoRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
-    return telefonoRegex.test(telefono);
 }
 
 // Función para formatear teléfono

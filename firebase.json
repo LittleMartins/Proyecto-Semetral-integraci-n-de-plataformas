@@ -8,17 +8,38 @@
     ],
     "rewrites": [
       {
+        "source": "/",
+        "destination": "/views/index.html"
+      },
+      {
+        "source": "/views/**",
+        "destination": "/views/**"
+      },
+      {
         "source": "**",
-        "destination": "/index.html"
+        "destination": "/views/index.html"
       }
     ],
     "headers": [
       {
-        "source": "**/*.@(js|css)",
+        "source": "**/*.@(js|mjs)",
         "headers": [
           {
+            "key": "Content-Type",
+            "value": "application/javascript"
+          },
+          {
             "key": "Cache-Control",
-            "value": "max-age=31536000"
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "**/*.css",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "text/css"
           }
         ]
       }
